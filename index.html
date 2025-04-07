@@ -1,3 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Auto Motion Particle Sphere</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #ccc; }
+    canvas { display: block; }
+    #enableMotion {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1;
+      padding: 10px 20px;
+      font-size: 16px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <button id="enableMotion">Enable Motion</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    const radius = 1.5;
+
+    for (let i = 0; i < 1500; i++) {
+      const theta = 2 * Math.PI * Math.random();
+      const phi = Math.acos(2 * Math.random() - 1);
+      const x = radius * Math.sin(phi) * Math.cos(theta);
+      const y = radius * Math.sin(phi) * Math.sin(theta);
+      const z = radius * Math.cos(phi);
+      vertices.push(x, y, z);
+    }
+
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.03 });
+    const pointCloud = new THREE.Points(geometry, material);
+    scene.add(pointCloud);
+
+    let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    let gyroX = 0, gyroY = 0;
+    let gyroEnabled = false;
+    let mouseX = 0, mouseY = 0;
+
+    const enableButton = document.getElementById("enableMotion");
+
+    if (isMobile) {
+      // Check if permission request is required (iOS 13+)
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        enableButton.style.display = "block";
+        enableButton.addEventListener("click", async () => {
+          try {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            if (permission === "granted") {
+              startGyro();
+              enableButton.style.display = "none";
+            }
+          } catch (e) {
+            alert("Motion permission denied.");
+          }
+        });
+      } else {
+        // Android / other mobile browsers – no permission needed
+        startGyro();
+        enableButton.style.display = "none";
+      }
+    } else {
+      // Desktop: mouse movement
+      enableButton.style.display = "none";
+      document.addEventListener('mousemove', (event) => {
+        mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+        mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+      });
+    }
 
     function startGyro() {
       window.addEventListener("deviceorientation", (event) => {
@@ -15,8 +100,6 @@
       } else {
         pointCloud.rotation.y = -mouseX * 0.5;
         pointCloud.rotation.x = -mouseY * 0.3;
-
-
       }
       renderer.render(scene, camera);
     }
