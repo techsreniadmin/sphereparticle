@@ -20,6 +20,12 @@
 <body>
   <button id="enableMotion">Enable Motion</button>
 
+  <audio id="background-music" loop>
+    <source src="Tobu - Live Your Life [NCS Release].mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
+
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script>
     const scene = new THREE.Scene();
@@ -111,6 +117,34 @@
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    const audio = document.getElementById('background-music');
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const analyser = audioContext.createAnalyser();
+  const source = audioContext.createMediaElementSource(audio);
+  source.connect(analyser);
+  analyser.connect(audioContext.destination);
+  analyser.fftSize = 256;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+
+  function animate() {
+    requestAnimationFrame(animate);
+    analyser.getByteFrequencyData(dataArray);
+    const averageFrequency = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
+    const scale = 1 + averageFrequency / 256;
+    pointCloud.scale.set(scale, scale, scale);
+    renderer.render(scene, camera);
+  }
+
+  audio.play().then(() => {
+    audioContext.resume().then(() => {
+      animate();
+    });
+  }).catch(error => {
+    console.error('Audio playback failed:', error);
+  });
+
   </script>
 </body>
 </html>
