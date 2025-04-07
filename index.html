@@ -1,78 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Particle Sphere</title>
-  <style>
-    body { margin: 0; overflow: hidden; background: #cccccc; } /* Light grey background */
-    canvas { display: block; }
-  </style>
-</head>
-<body>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-  <script>
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 5;
-  
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-  
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    const radius = 1.5;
-  
-    for (let i = 0; i < 1500; i++) {
-      const theta = 2 * Math.PI * Math.random();
-      const phi = Math.acos(2 * Math.random() - 1);
-      const x = radius * Math.sin(phi) * Math.cos(theta);
-      const y = radius * Math.sin(phi) * Math.sin(theta);
-      const z = radius * Math.cos(phi);
-      vertices.push(x, y, z);
-    }
-  
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.03 });
-    const pointCloud = new THREE.Points(geometry, material);
-    scene.add(pointCloud);
-  
-    let mouseX = 0, mouseY = 0;
-    let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    let gyroX = 0, gyroY = 0;
-  
-    if (isMobile && window.DeviceOrientationEvent) {
-      window.addEventListener("deviceorientation", (event) => {
-        gyroX = event.beta || 0;
-        gyroY = event.gamma || 0;
-      }, true);
-    } else {
-      document.addEventListener('mousemove', (event) => {
-        mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-        mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-      });
-    }
-  
-    function animate() {
-      requestAnimationFrame(animate);
-  
-      if (isMobile) {
-        pointCloud.rotation.x = gyroX * 0.01;
-        pointCloud.rotation.y = gyroY * 0.01;
-      } else {
-        pointCloud.rotation.y = -mouseX * 0.5;
-        pointCloud.rotation.x = -mouseY * 0.3;
-      }
-  
-      renderer.render(scene, camera);
-    }
-    animate();
-  
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
+  <head>
+    <meta charset="UTF-8">
+    <title>Particle Sphere</title>
+    <style>
+      body { margin: 0; overflow: hidden; background: #cccccc; } /* Light grey background */
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+    <button id="enableMotion" style="position: absolute; top: 20px; left: 20px; z-index: 1; padding: 10px 20px; font-size: 16px;">
+      Enable Motion
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script>
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 5;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>  
-</body>
+      document.body.appendChild(renderer.domElement);
+
+      const geometry = new THREE.BufferGeometry();
+      const vertices = [];
+      const radius = 1.5;
+
+      for (let i = 0; i < 1500; i++) {
+        const theta = 2 * Math.PI * Math.random();
+        const phi = Math.acos(2 * Math.random() - 1);
+        const x = radius * Math.sin(phi) * Math.cos(theta);
+        const y = radius * Math.sin(phi) * Math.sin(theta);
+        const z = radius * Math.cos(phi);
+        vertices.push(x, y, z);
+      }
+
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.03 });
+      const pointCloud = new THREE.Points(geometry, material);
+      scene.add(pointCloud);
+
+      let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      let mouseX = 0, mouseY = 0;
+      let gyroX = 0, gyroY = 0;
+      let gyroEnabled = false;
+
+      const enableButton = document.getElementById("enableMotion");
+      if (isMobile) {
+        enableButton.style.display = "block";
+        enableButton.addEventListener("click", async () => {
+          if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+              const permissionState = await DeviceOrientationEvent.requestPermission();
+              if (permissionState === 'granted') {
+                startGyro();
+                enableButton.style.display = "none";
+              }
+            } catch (e) {
+              alert("Permission not granted for motion control.");
+            }
+          } else {
+            // Android usually doesn’t need permission
+            startGyro();
+            enableButton.style.display = "none";
+          }
+        });
+      } else {
+        enableButton.style.display = "none";
+        document.addEventListener('mousemove', (event) => {
+          mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+          mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
+      }
+
+      function startGyro() {
+        window.addEventListener("deviceorientation", (event) => {
+          gyroX = event.beta || 0;
+          gyroY = event.gamma || 0;
+          gyroEnabled = true;
+        });
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (gyroEnabled) {
+          pointCloud.rotation.x = gyroX * 0.01;
+          pointCloud.rotation.y = gyroY * 0.01;
+        } else {
+          pointCloud.rotation.y = -mouseX * 0.5;
+          pointCloud.rotation.x = -mouseY * 0.3;
+        }
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    </script>
+  </body>
 </html>
