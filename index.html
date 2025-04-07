@@ -2,16 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Particle Sphere</title>
+    <title>Auto Motion Particle Sphere</title>
     <style>
-      body { margin: 0; overflow: hidden; background: #cccccc; } /* Light grey background */
+      body { margin: 0; overflow: hidden; background: #ccc; }
       canvas { display: block; }
+      #enableMotion {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1;
+        padding: 10px 20px;
+        font-size: 16px;
+        display: none;
+      }
     </style>
   </head>
   <body>
-    <button id="enableMotion" style="position: absolute; top: 20px; left: 20px; z-index: 1; padding: 10px 20px; font-size: 16px;">
-      Enable Motion
-    </button>
+    <button id="enableMotion">Enable Motion</button>
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script>
@@ -42,15 +49,17 @@
       scene.add(pointCloud);
 
       let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-      let mouseX = 0, mouseY = 0;
+      let isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
       let gyroX = 0, gyroY = 0;
       let gyroEnabled = false;
+      let mouseX = 0, mouseY = 0;
 
       const enableButton = document.getElementById("enableMotion");
+
       if (isMobile) {
-        enableButton.style.display = "block";
-        enableButton.addEventListener("click", async () => {
-          if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        if (isIOS && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          enableButton.style.display = "block";
+          enableButton.addEventListener("click", async () => {
             try {
               const permissionState = await DeviceOrientationEvent.requestPermission();
               if (permissionState === 'granted') {
@@ -58,16 +67,15 @@
                 enableButton.style.display = "none";
               }
             } catch (e) {
-              alert("Permission not granted for motion control.");
+              alert("Motion permission denied.");
             }
-          } else {
-            // Android usually doesn’t need permission
-            startGyro();
-            enableButton.style.display = "none";
-          }
-        });
+          });
+        } else {
+          // Auto enable on Android and others
+          startGyro();
+        }
       } else {
-        enableButton.style.display = "none";
+        // Desktop: mouse control
         document.addEventListener('mousemove', (event) => {
           mouseX = (event.clientX / window.innerWidth) * 2 - 1;
           mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -93,6 +101,7 @@
         }
         renderer.render(scene, camera);
       }
+
       animate();
 
       window.addEventListener('resize', () => {
