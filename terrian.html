@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Interactive Scattered Tech Matrix</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #ccc; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+    <a href="index.html" style="position: absolute; top: 20px; left: 20px; z-index: 2; background: #fff; color: #000; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-family: sans-serif;">
+        ← See Dotted Sphere 
+    </a>
+    <a href="face.html" style="position: absolute; top: 75px; left: 20px; z-index: 2; background: #fff; color: #000; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-family: sans-serif;">
+    ← See Tech Face 
+    </a>
+    <a href="matrix.html" style="position: absolute; top: 130px; left: 20px; z-index: 2; background: #fff; color: #000; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-family: sans-serif;">
+      ← See Matrix 
+    </a>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 10, 20);
+        camera.lookAt(0, 0, 0);
+    
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+    
+        // Add light
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(10, 20, 10);
+        scene.add(light);
+    
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+    
+        // Create water surface (wave effect)
+        const waterGeometry = new THREE.PlaneGeometry(50, 50, 64, 64);
+        const waterMaterial = new THREE.MeshPhongMaterial({
+            color: 0x1e90ff,
+            flatShading: true,
+            side: THREE.DoubleSide,
+        });
+        const water = new THREE.Mesh(waterGeometry, waterMaterial);
+        water.rotation.x = -Math.PI / 2;
+        scene.add(water);
+    
+        // Additional water bodies
+        const createWaterExtension = (xOffset) => {
+            const waterExtensionGeometry = new THREE.PlaneGeometry(50, 50, 64, 64);
+            const waterExtension = new THREE.Mesh(waterExtensionGeometry, waterMaterial);
+            waterExtension.rotation.x = -Math.PI / 2;
+            waterExtension.position.set(xOffset, -0.2, 0);
+            scene.add(waterExtension);
+            return waterExtension;
+        };
+    
+        const leftWater = createWaterExtension(-50);
+        const rightWater = createWaterExtension(50);
+    
+        // Update water vertices
+        function updateWaterVertices(mesh) {
+            const time = performance.now() * 0.001;
+            const vertices = mesh.geometry.attributes.position.array;
+            const widthSegments = 64;
+    
+            for (let i = 0; i < vertices.length; i += 3) {
+                const x = vertices[i];
+                const y = vertices[i + 1];
+                const z = vertices[i + 2];
+    
+                vertices[i + 2] = Math.sin((x + time) * 0.5) * Math.cos((y + time) * 0.5) * 0.5;
+            }
+    
+            mesh.geometry.attributes.position.needsUpdate = true;
+            mesh.geometry.computeVertexNormals();
+        }
+    
+        // Create terrain (landmass)
+        const landGeometry = new THREE.PlaneGeometry(50, 20, 20, 20);
+        const landMaterial = new THREE.MeshPhongMaterial({
+        color: 0x228b22, // Green color for the terrain
+        flatShading: true,
+        side: THREE.DoubleSide,
+        });
+        const land = new THREE.Mesh(landGeometry, landMaterial);
+        land.rotation.x = -Math.PI / 2;
+        land.position.set(0, 0.01, -35); // Adjusted to the edge of the water body
+        scene.add(land);
+
+    
+        // Boat object
+        const boatGeometry = new THREE.BoxGeometry(1, 0.5, 2);
+        const boatMaterial = new THREE.MeshPhongMaterial({ color: 0xff4500 });
+        const boat = new THREE.Mesh(boatGeometry, boatMaterial);
+        boat.position.set(0, 0.5, 0);
+        scene.add(boat);
+    
+        // Interactivity
+        let cursorX = 0;
+        let cursorY = 0;
+    
+        document.addEventListener("mousemove", (event) => {
+            cursorX = (event.clientX / window.innerWidth) * 2 - 1;
+            cursorY = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
+    
+        window.addEventListener("deviceorientation", (event) => {
+            cursorX = event.gamma / 45;
+            cursorY = event.beta / 45;
+        });
+    
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+    
+            // Update water and extensions
+            updateWaterVertices(water);
+            updateWaterVertices(leftWater);
+            updateWaterVertices(rightWater);
+    
+            // Move boat
+            boat.position.x += (cursorX * 10 - boat.position.x) * 0.05;
+            boat.position.z += (cursorY * 10 - boat.position.z) * 0.05;
+    
+            renderer.render(scene, camera);
+        }
+    
+        animate();
+    
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

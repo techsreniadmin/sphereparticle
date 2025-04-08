@@ -2,29 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Auto Motion Particle Sphere</title>
+  <title>Dotted Sphere with Effects</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #ccc; }
+    body { margin: 0; overflow: hidden; background: #000; }
     canvas { display: block; }
-    #enableMotion {
+    /* #nav {
       position: absolute;
-      top: 20px;
-      left: 20px;
-      z-index: 1;
-      padding: 10px 20px;
-      font-size: 16px;
-      display: none;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
     }
+    #nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 16px;
+      margin-right: 20px;
+    } */
   </style>
 </head>
 <body>
-  <button id="enableMotion">Enable Motion</button>
-
-  <audio id="background-music" loop>
-    <source src="Tobu - Live Your Life [NCS Release].mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
-  </audio>
-
+  <a href="face.html" style="position: absolute; top: 20px; right: 20px; z-index: 2; background: #fff; color: #000; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-family: sans-serif;">
+    See Tech Face →
+  </a>
+  <a href="matrix.html" style="position: absolute; top: 75px; right: 20px; z-index: 2; background: #fff; color: #000; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-family: sans-serif;">
+    See Matrix →
+  </a>
+  <a href="terrian.html" style="position: absolute; top: 10px; right: 20px; z-index: 2; background: #fff; color: #000; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-family: sans-serif;">
+    See Terrian →
+</a>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
   <script>
@@ -36,77 +41,81 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
+    // Create a dotted sphere
     const radius = 1.5;
+    const pointGeometry = new THREE.BufferGeometry();
+    const vertices = [];
 
     for (let i = 0; i < 1500; i++) {
-      const theta = 2 * Math.PI * Math.random();
-      const phi = Math.acos(2 * Math.random() - 1);
+      const theta = 2 * Math.PI * Math.random(); // Random angle
+      const phi = Math.acos(2 * Math.random() - 1); // Random polar angle
       const x = radius * Math.sin(phi) * Math.cos(theta);
       const y = radius * Math.sin(phi) * Math.sin(theta);
       const z = radius * Math.cos(phi);
       vertices.push(x, y, z);
     }
 
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.03 });
-    const pointCloud = new THREE.Points(geometry, material);
-    scene.add(pointCloud);
+    pointGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const pointMaterial = new THREE.PointsMaterial({ size: 0.05 });
+    const dottedSphere = new THREE.Points(pointGeometry, pointMaterial);
+    scene.add(dottedSphere);
 
-    let isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    let gyroX = 0, gyroY = 0;
-    let gyroEnabled = false;
-    let mouseX = 0, mouseY = 0;
+    // Glow effect material
+    const pulseMaterial = new THREE.PointsMaterial({ size: 0.1, transparent: true, opacity: 0.5 });
+    const pulseSphere = new THREE.Points(pointGeometry.clone(), pulseMaterial);
+    pulseSphere.visible = false;
+    scene.add(pulseSphere);
 
-    const enableButton = document.getElementById("enableMotion");
+    let pulseActive = false;
+    let pulseScale = 1.5;
 
-    if (isMobile) {
-      // Check if permission request is required (iOS 13+)
-      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        enableButton.style.display = "block";
-        enableButton.addEventListener("click", async () => {
-          try {
-            const permission = await DeviceOrientationEvent.requestPermission();
-            if (permission === "granted") {
-              startGyro();
-              enableButton.style.display = "none";
-            }
-          } catch (e) {
-            alert("Motion permission denied.");
-          }
-        });
-      } else {
-        // Android / other mobile browsers – no permission needed
-        startGyro();
-        enableButton.style.display = "none";
-      }
-    } else {
-      // Desktop: mouse movement
-      enableButton.style.display = "none";
-      document.addEventListener('mousemove', (event) => {
-        mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-        mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-      });
-    }
+    // Color pulsing variables
+    let colorChangeSpeed = 0.02;
 
-    function startGyro() {
-      window.addEventListener("deviceorientation", (event) => {
-        gyroX = event.beta || 0;
-        gyroY = event.gamma || 0;
-        gyroEnabled = true;
-      });
-    }
+    // Interaction variables
+    let rotation = { x: 0, y: 0 };
+    document.addEventListener('mousemove', (event) => {
+      rotation.x = -(event.clientY / window.innerHeight - 0.5) * Math.PI * 2;
+      rotation.y = -(event.clientX / window.innerWidth - 0.5) * Math.PI * 2;
+    });
+
+    // Mobile tilt controls
+    window.addEventListener('deviceorientation', (event) => {
+      rotation.x = -THREE.MathUtils.degToRad(event.beta - 90); // Front-back tilt
+      rotation.y = -THREE.MathUtils.degToRad(event.gamma); // Left-right tilt
+    });
+
+    // Glow pulse trigger
+    document.addEventListener('click', () => {
+      pulseActive = true;
+      pulseScale = 1.5; // Reset pulse scale
+      pulseSphere.visible = true;
+    });
 
     function animate() {
       requestAnimationFrame(animate);
-      if (gyroEnabled) {
-        pointCloud.rotation.x = gyroX * 0.01;
-        pointCloud.rotation.y = gyroY * 0.01;
-      } else {
-        pointCloud.rotation.y = -mouseX * 0.5;
-        pointCloud.rotation.x = -mouseY * 0.3;
+
+      // Color pulsing
+      const color = new THREE.Color(`hsl(${(Date.now() * colorChangeSpeed) % 360}, 100%, 50%)`);
+      pointMaterial.color = color;
+
+      // Handle glow pulse
+      if (pulseActive) {
+        pulseScale += 0.1;
+        pulseSphere.scale.set(pulseScale, pulseScale, pulseScale);
+        pulseSphere.material.opacity -= 0.05;
+
+        if (pulseSphere.material.opacity <= 0) {
+          pulseActive = false;
+          pulseSphere.visible = false;
+          pulseSphere.material.opacity = 0.5; // Reset opacity
+        }
       }
+
+      // Apply rotation based on interaction
+      dottedSphere.rotation.x = rotation.x;
+      dottedSphere.rotation.y = rotation.y;
+
       renderer.render(scene, camera);
     }
 
@@ -117,34 +126,6 @@
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
-
-    const audio = document.getElementById('background-music');
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  const analyser = audioContext.createAnalyser();
-  const source = audioContext.createMediaElementSource(audio);
-  source.connect(analyser);
-  analyser.connect(audioContext.destination);
-  analyser.fftSize = 256;
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
-
-  function animate() {
-    requestAnimationFrame(animate);
-    analyser.getByteFrequencyData(dataArray);
-    const averageFrequency = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
-    const scale = 1 + averageFrequency / 256;
-    pointCloud.scale.set(scale, scale, scale);
-    renderer.render(scene, camera);
-  }
-
-  audio.play().then(() => {
-    audioContext.resume().then(() => {
-      animate();
-    });
-  }).catch(error => {
-    console.error('Audio playback failed:', error);
-  });
-
   </script>
 </body>
 </html>

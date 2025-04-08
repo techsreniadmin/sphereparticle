@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Interactive Scattered Tech Matrix</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #ccc; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+    <a href="index.html" style="position: absolute; top: 20px; left: 20px; z-index: 2; background: #fff; color: #000; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-family: sans-serif;">
+        ← See Dotted Sphere 
+    </a>
+    <a href="face.html" style="position: absolute; top: 75px; left: 20px; z-index: 2; background: #fff; color: #000; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-family: sans-serif;">
+    ← See Tech Face 
+    </a>
+    <a href="terrian.html" style="position: absolute; top: 130px; right: 20px; z-index: 2; background: #fff; color: #000; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-family: sans-serif;">
+        See Terrian →
+    </a>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 10;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const fontLoader = new THREE.FontLoader();
+    const matrixGroup = new THREE.Group();
+    scene.add(matrixGroup);
+
+    // Load font for 3D characters
+    fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+      for (let i = 0; i < 100; i++) {
+        const textGeometry = new THREE.TextGeometry((Math.random() > 0.5 ? '1' : '0'), {
+          font: font,
+          size: 0.5,
+          height: 0.1,
+        });
+
+        const textMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+
+        // Randomize positions
+        textMesh.position.set(
+          (Math.random() - 0.5) * 20,
+          (Math.random() - 0.5) * 20,
+          (Math.random() - 0.5) * 20
+        );
+
+        textMesh.rotation.set(
+          Math.random() * Math.PI,
+          Math.random() * Math.PI,
+          Math.random() * Math.PI
+        );
+
+        matrixGroup.add(textMesh);
+      }
+
+      const light = new THREE.PointLight(0xffffff, 1, 100);
+      light.position.set(10, 10, 10);
+      scene.add(light);
+
+      // Track mouse movement
+      const mouse = { x: 0, y: 0 };
+      let gyroEnabled = false;
+      let gyroX = 0, gyroY = 0;
+
+      document.addEventListener('mousemove', (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      });
+
+      if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        window.addEventListener('deviceorientation', (event) => {
+          gyroEnabled = true;
+          gyroX = event.gamma || 0;
+          gyroY = event.beta || 0;
+        });
+      }
+
+      // Animate and interact
+      const animate = () => {
+        requestAnimationFrame(animate);
+
+        // Interaction: Move the group based on input
+        const targetX = gyroEnabled ? gyroX * 0.1 : -mouse.x * 2;
+        const targetY = gyroEnabled ? gyroY * 0.1 : -mouse.y * 2;
+
+        matrixGroup.position.x += (targetX - matrixGroup.position.x) * 0.05;
+        matrixGroup.position.y += (targetY - matrixGroup.position.y) * 0.05;
+
+        // Swirling effect
+        matrixGroup.rotation.y += 0.01;
+
+        renderer.render(scene, camera);
+      };
+
+      animate();
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
